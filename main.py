@@ -1,9 +1,10 @@
 import fastapi
 import sqlite3
-from pydantic import BaseModel
-from typing import List, Optional
+from pydantic import BaseModel, validator
+from typing import List, Optional, Dict
 import ollama
 import html
+import httpx
 
 app = fastapi.FastAPI()
 
@@ -12,24 +13,32 @@ conn = sqlite3.connect('trips.db', check_same_thread=False)
 cursor = conn.cursor()
 
 cursor.execute('''
-    CREATE TABLE IF NOT EXISTS trips (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        destination TEXT NOT NULL,
-        start_date TEXT,
-        end_date TEXT,
-        notes TEXT
-    )
+    CREATE TABLE IF NOT EXISTS trips ( 
+        id INTEGER PRIMARY KEY AUTOINCREMENT, 
+        name TEXT NOT NULL, 
+        destination TEXT NOT NULL, 
+        start_date TEXT, 
+        end_date TEXT, 
+        notes TEXT, 
+        intelligence_data TEXT 
+    ) 
 ''')
 conn.commit()
 
-class Trip(BaseModel):
-    id: Optional[int] = None
-    name: str
-    destination: str
-    start_date: Optional[str] = None
-    end_date: Optional[str] = None
-    notes: Optional[str] = None
+class Trip(BaseModel): 
+    id: Optional[int] = None 
+    name: str 
+    destination: str 
+    start_date: Optional[str] = None 
+    end_date: Optional[str] = None 
+    notes: Optional[str] = None 
+    intelligence_data: Optional[str] = None
+
+    @validator('name')
+    def name_must_be_valid(cls, value):
+        if not value:
+            raise ValueError('Name cannot be empty')
+        return value
 
 
 @app.get("", response_model=List[Trip])
@@ -38,7 +47,7 @@ async def list_trips():
     rows = cursor.fetchall()
     trips = []
     for row in rows:
-        trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5])
+        trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
         trips.append(trip)
     return trips
 
@@ -58,7 +67,7 @@ async def read_trip(trip_id: int):
     row = cursor.fetchone()
     if not row:
         raise fastapi.HTTPException(status_code=404, detail="Trip not found")
-    trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5])
+    trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
     return trip
 
 
@@ -74,52 +83,34 @@ async def update_trip(trip_id: int, trip: Trip):
 async def delete_trip(trip_id: int):
     cursor.execute('DELETE FROM trips WHERE id = ?', (trip_id,))
     conn.commit()
-    return {"message": "Trip deleted"}
+    return {"message": "Trip deleted successfully"}
 
 
-@app.get('/generate_briefing/{trip_id}')
-async def generate_briefing(trip_id: int):
+@app.post('/{trip_id}/intelligence')
+async def gather_intelligence(trip_id: int):
+    trip = await read_trip(trip_id)
+    destination = trip.destination
+
     try:
-        trip = read_trip(trip_id)
-        prompt = f"Generate a briefing for a trip to {trip.destination} named {trip.name}. Consider the dates {trip.start_date} to {trip.end_date}, and these notes: {trip.notes}.  Focus on safety and cultural considerations."
-
-        response = ollama.chat(model='mistral', messages=[{"role": "user", "content": prompt}])
-        briefing = response['response']
-        
-        # Escape HTML characters in briefing
-        escaped_briefing = html.escape(briefing)
-        
-        return {"briefing": escaped_briefing}
+        response = await ollama.chat(model='google/flan-t5-xxl', messages=[{"role": "user", "content": f"Summarize key facts and points of interest about {destination}" }])
+        intelligence_data = response['response']
 
     except Exception as e:
-        return {"error": str(e)}
+        intelligence_data = f"Error gathering intelligence: {str(e)}"
+
+    cursor.execute('UPDATE trips SET intelligence_data = ? WHERE id = ?', (intelligence_data, trip_id))
+    conn.commit()
+
+    trip.intelligence_data = intelligence_data
+    return trip
 
 
-@app.get('/html_briefing/{trip_id}')
-async def html_briefing(trip_id: int):
-    briefing_data = generate_briefing(trip_id)
-    if "error" in briefing_data:
-        return fastapi.responses.HTMLContent(f"<h1>Error: {briefing_data['error']}</h1>", status_code=500)
-    
-    briefing_content = briefing_data['briefing']
-    
-    html_content = f'''
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <title>Trip Briefing</title>
-    <style>
-    body {{ font-family: Arial, sans-serif; }}
-    .briefing {{ margin: 20px; padding: 20px; border: 1px solid #ccc; }}
-    </style>
-    </head>
-    <body>
-    <div class="briefing"><h1>Trip Briefing</h1><p>{briefing_content}</p></div>
-    </body>
-    </html>
-    '''
-    return fastapi.responses.HTMLContent(html_content)
+@app.get('/intelligence/{trip_id}')
+async def get_intelligence(trip_id: int):
+    trip = await read_trip(trip_id)
+    if trip.intelligence_data:
+        return {"intelligence_data": trip.intelligence_data}
+    else:
+        return {"message": "No intelligence data available for this trip."}
 
 
-if __name__ == '__main__':
-    fastapi.FastAPI().run(host='0.0.0.0', port=8000)

@@ -1,4 +1,5 @@
 fastapi
-sqlite3
+site3
 pydantic
 ollama
+httpx
