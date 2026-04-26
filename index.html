@@ -3,10 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trip Manager</title>
+    <title>Trip Registration and AI Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .registration-form {
+            width: 50%;
+            padding: 20px;
+        }
+
+        .chat-panel {
+            width: 50%;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            cursor: pointer;
+        }
+
+        #chat-messages {
+            height: 200px;
+            overflow-y: scroll;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+
+        .message {
+            margin-bottom: 5px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+        }
+
+        .user-message {
+            background-color: #dcf8c6;
+            text-align: right;
+        }
+    </style>
 </head>
 <body>
-    <h1>Trip Manager</h1>
-    <script src="main.js"></script>
-</body>
+
+    <div class="container">
+
+        <div class="registration-form">
+            <h2">Trip Registration Form</h2>
+            <form id="trip-form">
+                <label for="name">Name:</label>
+                <input type="text" id="name" name="name" required>
+
+                <label for="destination">Destination:</label>
+                <input type="text" id="destination" name="destination" required>
+
+                <label for="start-date">Start Date:</label>
+                <input type="text" id="start-date" name="start-date">
+
+                <label for="end-date">End Date:</label>
+                <input type="text" id="end-date" name="end-date">
+
+                <label for="notes">Notes:</label>
+                <textarea id="notes" name="notes"></textarea>
+
+                <button type="submit">Register Trip</button>
+            </form>
+            <ul id="trip-list"></ul>
+        </div
+
+        <div class="chat-panel">
+            <h2">AI Chat</h2>
+            <div id="chat-messages"></div
+            <input type="text" id="user-input" placeholder="Type your message...">
+            <button id="send-button">Send</button>
+        </div
+
+    </div
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tripForm = document.getElementById('trip-form');
+            const tripList = document.getElementById('trip-list');
+            const chatMessages = document.getElementById('chat-messages');
+            const userInput = document.getElementById('user-input');
+            const sendButton = document.getElementById('send-button');
+
+            tripForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+
+                const tripData = {
+                    name: document.getElementById('name').value,
+                    destination: document.getElementById('destination').value,
+                    start_date: document.getElementById('start-date').value,
+                    end_date: document.getElementById('end-date').value,
+                    notes: document.getElementById('notes').value
+                };
+
+                try {
+                    const response = await fetch('/trips', { 
+                        method: 'POST', 
+                        headers: { 
+                            'Content-Type': 'application/json' 
+                        }, 
+                        body: JSON.stringify(tripData) 
+                    });
+
+                    const newTrip = await response.json();
+
+                    const listItem = document.createElement('li');
+                    listItem.textContent = `Trip ID: ${newTrip.id}, Name: ${newTrip.name}, Destination: ${newTrip.destination}`;
+                    tripList.appendChild(listItem);
+
+                    tripForm.reset();
+
+                } catch (error) {
+                    console.error('Error creating trip:', error);
+                }
+            });
+
+             // Fetch and display existing trips
+             async function fetchTrips() {
+                try {
+                    const response = await fetch('/trips');
+                    const trips = await response.json();
+
+                    trips.forEach(trip => {
+                        const listItem = document.createElement('li');
+                        listItem.textContent = `Trip ID: ${trip.id}, Name: ${trip.name}, Destination: ${trip.destination}`;
+                        tripList.appendChild(listItem);
+                    });
+                } catch (error) {
+                    console.error('Error fetching trips:', error);
+                }
+            }
+
+
+            fetchTrips();
+
+            sendButton.addEventListener('click', async () => {
+                const message = userInput.value;
+                if (message.trim() !== '') {
+                    const messageElement = document.createElement('div');
+                    messageElement.classList.add('message');
+                    messageElement.classList.add('user-message');
+                    messageElement.textContent = `You: ${message}`;
+                    chatMessages.appendChild(messageElement);
+
+                    // Simulate AI response (replace with actual AI integration)
+                    const aiResponse = `AI: This is a simulated response to '${message}'`;
+
+                    const aiMessageElement = document.createElement('div');
+                    aiMessageElement.classList.add('message');
+                    aiMessageElement.textContent = aiResponse;
+                    chatMessages.appendChild(aiMessageElement);
+
+                    userInput.value = '';
+                    chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll to bottom
+                }
+            });
+
+            userInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    sendButton.click();
+                }
+            });
+        });
+    </script>
+
+</body
 </html>
