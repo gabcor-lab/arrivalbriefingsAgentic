@@ -1,0 +1,41 @@
+body {
+	font-family: sans-serif;
+	margin: 20px;
+}
+
+#trip-list {
+	list-style: none;
+	padding: 0;
+}
+
+#trip-list li {
+	margin-bottom: 10px;
+	border: 1px solid #ccc;
+	padding: 10px;
+}
+
+#briefing-container {
+	margin-top: 20px;
+}
+
+#briefing-display {
+	width: 100%;
+	height: 200px;
+}
+
+#briefing-prompt {
+	width: 100%;
+	margin-bottom: 10px;
+}
+
+button {
+	padding: 10px 20px;
+	background-color: #4CAF50;
+	color: white;
+	border: none;
+	cursor: pointer;
+}
+
+button:hover {
+	background-color: #3e8e41;
+}

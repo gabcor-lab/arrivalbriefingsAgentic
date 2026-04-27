@@ -1,44 +1,41 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trip Management</title>
+	<title>Trip Registration and Briefing</title>
+	<link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1">Trip Management</h1>
+	<h1>Trip Registration</h1>
+	
+	<form id="trip-form">
+		<label for="trip-name">Trip Name:</label><br>
+		<input type="text" id="trip-name" name="trip-name"><br>
 
-    <h2">Trip List</h2>
-    <ul id="trip-list">
-        <!-- Trip list items will be dynamically added here -->
-    </ul>
+		<label for="trip-destination">Destination:</label><br>
+		<input type="text" id="trip-destination" name="trip-destination"><br>
 
-    <h2">Add New Trip</h2>
-    <form id="new-trip-form">
-        <label for="trip-name">Name:</label><br>
-        <input type="text" id="trip-name" name="name" required><br><br>
+		<label for="trip-start-date">Start Date:</label><br>
+		<input type="date" id="trip-start-date" name="trip-start-date"><br>
 
-        <label for="trip-destination">Destination:</label><br>
-        <input type="text" id="trip-destination" name="destination" required><br><br>
+		<label for="trip-end-date">End Date:</label><br>
+		<input type="date" id="trip-end-date" name="trip-end-date"><br>
 
-        <label for="trip-start-date">Start Date:</label><br>
-        <input type="date" id="trip-start-date" name="start_date"><br><br>
+		<label for="trip-notes">Notes:</label><br>
+		<textarea id="trip-notes" name="trip-notes"></textarea><br>
 
-        <label for="trip-end-date">End Date:</label><br>
-        <input type="date" id="trip-end-date" name="end_date"><br><br>
+		<button type="submit">Register Trip</button>
+	</form>
 
-        <label for="trip-notes">Notes:</label><br>
-        <textarea id="trip-notes" name="notes"></textarea><br><br>
+	<h2>Registered Trips</h2>
+	<ul id="trip-list">
+	</ul>
 
-        <button type="submit">Add Trip</button>
-    </form>
+	<h2>AI Briefing</h2>
+	<div id="briefing-container">
+		<textarea id="briefing-display"></textarea><br>
+		<input type="text" id="briefing-prompt" placeholder="Enter briefing prompt..."><br>
+		<button id="get-briefing">Get Briefing</button>
+	</div>
 
-    <h2">Intelligence Gathering</h2>
-    <label for="trip-id">Trip ID:</label>
-    <input type="number" id="trip-id">
-    <button onclick="gatherIntelligence(document.getElementById('trip-id').value)">Gather Intelligence</button>
-    <div id="intelligence-output"></div>
-
-    <script src="main.js"></script>
+	<script src="main.js"></script>
 </body>
 </html>
