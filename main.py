@@ -5,6 +5,7 @@ from typing import List, Optional, Dict
 import ollama
 import html
 import httpx
+import os
 
 app = fastapi.FastAPI()
 
@@ -42,18 +43,18 @@ def name_must_be_valid(cls, value):
 
 
 @app.get("", response_model=List[Trip])
-async def list_trips():
+def list_trips():
     cursor.execute('SELECT * FROM trips')
-    rows = cursor.fetchall()
-    trips = []
-    for row in rows:
-        trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
-        trips.append(trip)
-    return trips
+rows = cursor.fetchall()
+trips = []
+for row in rows:
+    trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
+trips.append(trip)
+return trips
 
 
 @app.post("", response_model=Trip)
-async def create_trip(trip: Trip):
+def create_trip(trip: Trip):
     cursor.execute("INSERT INTO trips (name, destination, start_date, end_date, notes) VALUES (?, ?, ?, ?, ?)",
                    (trip.name, trip.destination, trip.start_date, trip.end_date, trip.notes))
     conn.commit()
@@ -62,10 +63,47 @@ async def create_trip(trip: Trip):
 
 
 @app.get('/{trip_id}', response_model=Trip)
-async def read_trip(trip_id: int):
+def read_trip(trip_id: int):
     cursor.execute('SELECT * FROM trips WHERE id = ?', (trip_id,))
-    row = cursor.fetchone()
+row = cursor.fetchone()
     if not row:
         raise fastapi.HTTPException(status_code=404, detail="Trip not found")
     trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
     return trip
+
+
+@app.put('/{trip_id}', response_model=Trip)
+def update_trip(trip_id: int, trip: Trip):
+    cursor.execute('''
+        UPDATE trips
+        SET name = ?, destination = ?, start_date = ?, end_date = ?, notes = ?
+        WHERE id = ?
+    ''', (trip.name, trip.destination, trip.start_date, trip.end_date, trip.notes, trip_id))
+    conn.commit()
+    return trip
+
+
+@app.delete('/{trip_id}')
+def delete_trip(trip_id: int):
+    cursor.execute('DELETE FROM trips WHERE id = ?', (trip_id,))
+    conn.commit()
+    return {"message": "Trip deleted"}
+
+
+@app.get('/intelligence/{trip_id}')
+def get_intelligence(trip_id: int):
+    try:
+        trip = read_trip(trip_id)
+        notes = trip.notes or ""
+        prompt = f"Generate a brief intelligence briefing for a trip to {trip.destination} with the following notes: {notes}"
+        response = ollama.chat(model='mistralai/Mistral-7B-Instruct-v0.1', messages=[{"role": "user", "content": prompt}])
+        intelligence = response['response']
+
+        cursor.execute("UPDATE trips SET intelligence_data = ? WHERE id = ?",
+                       (intelligence, trip_id))
+        conn.commit()
+
+        return {"intelligence": intelligence}
+    except Exception as e:
+        print(f"Error generating intelligence: {e}")
+        raise fastapi.HTTPException(status_code=500, detail="Failed to generate intelligence briefing")

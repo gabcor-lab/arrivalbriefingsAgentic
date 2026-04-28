@@ -1,41 +1,47 @@
 body {
-	font-family: sans-serif;
-	margin: 20px;
+    font-family: sans-serif;
 }
 
 #trip-list {
-	list-style: none;
-	padding: 0;
+    margin-bottom: 20px;
 }
 
-#trip-list li {
-	margin-bottom: 10px;
-	border: 1px solid #ccc;
-	padding: 10px;
+#new-trip-form {
+    margin-bottom: 20px;
 }
 
-#briefing-container {
-	margin-top: 20px;
+#trip-form label {
+    display: block;
+    margin-bottom: 5px;
 }
 
-#briefing-display {
-	width: 100%;
-	height: 200px;
+#trip-form input[type="text"], #trip-form input[type="date"] {
+    margin-bottom: 10px;
+    padding: 5px;
+    width: 300px;
 }
 
-#briefing-prompt {
-	width: 100%;
-	margin-bottom: 10px;
+#trip-form textarea {
+    margin-bottom: 10px;
+    padding: 5px;
+    width: 300px;
+    height: 100px;
 }
 
-button {
-	padding: 10px 20px;
-	background-color: #4CAF50;
-	color: white;
-	border: none;
-	cursor: pointer;
+#trip-form button {
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
 }
 
-button:hover {
-	background-color: #3e8e41;
+#trip-items {
+    list-style: none;
+    padding: 0;
+}
+
+#trip-items li {
+    padding: 5px;
+    border-bottom: 1px solid #eee;
 }

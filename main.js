@@ -1,94 +1,86 @@
-// Function to fetch and display trips
-async function fetchTrips() {
-  try {
-    const response = await fetch('/'); // API endpoint for listing trips
-    const trips = await response.json();
+document.addEventListener('DOMContentLoaded', () => {
+    const tripForm = document.getElementById('trip-form');
+    const tripList = document.getElementById('trip-items');
+    const tripSelect = document.getElementById('trip-select');
+    const briefingContent = document.getElementById('briefing-content');
 
-    const tripList = document.getElementById('trip-list');
-    tripList.innerHTML = ''; // Clear existing list
+    // Function to fetch trips from the API
+    async function fetchTrips() {
+        try {
+            const response = await fetch('/');
+            const trips = await response.json();
+            tripList.innerHTML = ''; // Clear existing list
 
-    trips.forEach(trip => {
-      const listItem = document.createElement('li');
-      listItem.textContent = `Trip: ${trip.name}, Destination: ${trip.destination}, Start Date: ${trip.start_date || ''}, End Date: ${trip.end_date || ''}`;
-      tripList.appendChild(listItem);
-    });
-  } catch (error) {
-    console.error('Error fetching trips:', error);
-    alert('Error fetching trips.  Check console for details.');
-  }
-}
+            trips.forEach(trip => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${trip.name} - ${trip.destination} (${trip.start_date || ''} - ${trip.end_date || ''})`;
+                tripList.appendChild(listItem);
+            });
 
-// Function to submit the trip registration form
-const tripForm = document.getElementById('trip-form');
+            // Populate the trip select dropdown
+            tripSelect.innerHTML = '';
+            trips.forEach(trip => {
+                const option = document.createElement('option');
+                option.value = trip.id;
+                option.textContent = `${trip.name} - ${trip.destination}`;
+                tripSelect.appendChild(option);
+            });
 
-
-tripForm.addEventListener('submit', async function (event) {
-  event.preventDefault();
-
-  const tripName = document.getElementById('trip-name').value;
-  const tripDestination = document.getElementById('trip-destination').value;
-  const tripStartDate = document.getElementById('trip-start-date').value;
-  const tripEndDate = document.getElementById('trip-end-date').value;
-  const tripNotes = document.getElementById('trip-notes').value;
-
-  const newTrip = {
-    name: tripName,
-    destination: tripDestination,
-    start_date: tripStartDate,
-    end_date: tripEndDate,
-    notes: tripNotes,
-  };
-
-  try {
-    const response = await fetch('', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(newTrip),
-    });
-
-    if (response.ok) {
-      alert('Trip registered successfully!');
-      // Refresh the trip list after successful registration
-      fetchTrips();
-      // Clear the form
-      tripForm.reset();
-    } else {
-      alert('Error registering trip.  Check console for details.');
-      console.error('Error registering trip:', response.status, response.statusText);
+        } catch (error) {
+            console.error('Error fetching trips:', error);
+            alert('Failed to fetch trips. See console for details.');
+        }
     }
-  } catch (error) {
-    alert('Error registering trip.  Check console for details.');
-    console.error('Error registering trip:', error);
-  }
-});
 
-// Function to get and display AI briefing
-const getBriefingButton = document.getElementById('get-briefing');
 
-getBriefingButton.addEventListener('click', async function () {
-  const tripId = tripForm.tripId; // Assuming you store the trip ID somewhere after creation
+    // Function to submit a new trip
+    async function submitTrip(event) {
+        event.preventDefault();
 
-  try {
-    const response = await fetch(`/${tripId}/briefing`);
-    const data = await response.json();
+        const name = document.getElementById('name').value;
+        const destination = document.getElementById('destination').value;
+        const start_date = document.getElementById('start-date').value;
+        const end_date = document.getElementById('end-date').value;
+        const notes = document.getElementById('notes').value;
 
-    if (response.ok) {
-      const briefingDisplay = document.getElementById('briefing-display');
-      briefingDisplay.value = data.briefing || data.message || ''; // Display briefing or error message
-    } else {
-      alert('Error getting briefing.  Check console for details.');
-      console.error('Error getting briefing:', response.status, response.statusText);
+        const newTrip = {
+            name: name,
+            destination: destination,
+            start_date: start_date,
+            end_date: end_date,
+            notes: notes
+        };
+
+        try {
+            const response = await fetch('', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newTrip) });
+            const trip = await response.json();
+            alert('Trip added successfully!');
+            tripForm.reset();
+            fetchTrips();
+        } catch (error) {
+            console.error('Error adding trip:', error);
+            alert('Failed to add trip. See console for details.');
+        }
     }
-  } catch (error) {
-    alert('Error getting briefing.  Check console for details.');
-    console.error('Error getting briefing:', error);
-  }
+
+
+    function fetchIntelligence() {
+      const tripId = tripSelect.value;
+      if (tripId) {
+        fetch(`/intelligence/${tripId}`) 
+          .then(response => response.json()) 
+          .then(data => {
+            briefingContent.innerHTML = `<p>${data.intelligence}</p>`;
+          }) 
+          .catch(error => {
+            console.error('Error fetching intelligence:', error);
+            briefingContent.innerHTML = '<p>Failed to fetch intelligence briefing.</p>';
+          });
+      } else {
+        briefingContent.innerHTML = '';
+      }
+    }
+
+    tripForm.addEventListener('submit', submitTrip);
+    fetchTrips(); // Initial fetch
 });
-
-
-// Initial load
-fetchTrips();
-
-
