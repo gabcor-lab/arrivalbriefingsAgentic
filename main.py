@@ -36,9 +36,9 @@ class Trip(BaseModel):
 
     @validator('name')
 def name_must_be_valid(cls, value):
-    if not value:
-        raise ValueError('Name cannot be empty')
-    return value
+        if not value:
+            raise ValueError('Name cannot be empty')
+        return value
 
 
 @app.get("", response_model=List[Trip])
@@ -68,23 +68,4 @@ async def read_trip(trip_id: int):
     if not row:
         raise fastapi.HTTPException(status_code=404, detail="Trip not found")
     trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
-    return trip
-
-
-@app.delete('/{trip_id}')
-async def delete_trip(trip_id: int):
-    cursor.execute('DELETE FROM trips WHERE id = ?', (trip_id,))
-    conn.commit()
-    return {"message": "Trip deleted successfully"}
-
-
-@app.put('/{trip_id}')
-async def update_trip(trip_id: int, trip: Trip):
-    cursor.execute('''
-        UPDATE trips
-        SET name = ?, destination = ?, start_date = ?, end_date = ?, notes = ?, intelligence_data = ?
-        WHERE id = ?
-    ''', (trip.name, trip.destination, trip.start_date, trip.end_date, trip.notes, trip.intelligence_data, trip_id))
-    conn.commit()
-    trip.id = trip_id
     return trip
