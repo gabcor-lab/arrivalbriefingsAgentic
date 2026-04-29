@@ -7,45 +7,42 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Trip Registration</h1>
+    <h1 >Trip Registration</h1 >
+
+    <div id="registration-form">
+        <h2 >Register a New Trip</h2 >
+        <form id="trip-form">
+            <label for="trip-name">Trip Name:</label>
+            <input type="text" id="trip-name" name="trip-name" required><br><br>
+
+            <label for="trip-destination">Destination:</label>
+            <input type="text" id="trip-destination" name="trip-destination" required><br><br>
+
+            <label for="trip-start-date">Start Date:</label>
+            <input type="date" id="trip-start-date" name="trip-start-date"><br><br>
+
+            <label for="trip-end-date">End Date:</label>
+            <input type="date" id="trip-end-date" name="trip-end-date"><br><br>
+
+            <label for="trip-notes">Notes:</label>
+            <textarea id="trip-notes" name="trip-notes"></textarea><br><br>
+
+            <button type="submit">Register Trip</button>
+        </form>
+    </div >
 
     <div id="trip-list">
-        <h2>Registered Trips</h2>
-        <ul id="trip-items">
-            <!-- Trip items will be dynamically added here by JavaScript -->
-        </ul>
-    </div>
+        <h2 >Registered Trips</h2 >
+        <ul id="trip-items"></ul >
+    </div >
 
-    <div id="new-trip-form">
-        <h2>New Trip</h2>
-        <form id="trip-form">
-            <label for="name">Name:</label>
-            <input type="text" id="name" name="name" required>
-
-            <label for="destination">Destination:</label>
-            <input type="text" id="destination" name="destination" required>
-
-            <label for="start-date">Start Date:</label>
-            <input type="date" id="start-date" name="start-date">
-
-            <label for="end-date">End Date:</label>
-            <input type="date" id="end-date" name="end-date">
-
-            <label for="notes">Notes:</label>
-            <textarea id="notes" name="notes"></textarea>
-
-            <button type="submit">Add Trip</button>
-        </form>
-    </div>
-
-    <div id="intelligence-chat">
-      <h2>Intelligence Briefing</h2>
-      <select id="trip-select" onchange="fetchIntelligence()">
-        <!-- Options will be dynamically added by JavaScript -->
-      </select>
-      <div id="briefing-content"></div>
-    </div>
+    <div id="ai-chat-panel">
+        <h2 >AI Trip Assistant</h2 >
+        <div id="chat-log"></div >
+        <input type="text" id="user-input" placeholder="Type your message...">
+        <button id="send-button">Send</button>
+    </div >
 
     <script src="main.js"></script>
-</body>
-</html>
+</body >
+</html >

@@ -1,86 +1,89 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
+    // Registration form
     const tripForm = document.getElementById('trip-form');
-    const tripList = document.getElementById('trip-items');
-    const tripSelect = document.getElementById('trip-select');
-    const briefingContent = document.getElementById('briefing-content');
-
-    // Function to fetch trips from the API
-    async function fetchTrips() {
-        try {
-            const response = await fetch('/');
-            const trips = await response.json();
-            tripList.innerHTML = ''; // Clear existing list
-
-            trips.forEach(trip => {
-                const listItem = document.createElement('li');
-                listItem.textContent = `${trip.name} - ${trip.destination} (${trip.start_date || ''} - ${trip.end_date || ''})`;
-                tripList.appendChild(listItem);
-            });
-
-            // Populate the trip select dropdown
-            tripSelect.innerHTML = '';
-            trips.forEach(trip => {
-                const option = document.createElement('option');
-                option.value = trip.id;
-                option.textContent = `${trip.name} - ${trip.destination}`;
-                tripSelect.appendChild(option);
-            });
-
-        } catch (error) {
-            console.error('Error fetching trips:', error);
-            alert('Failed to fetch trips. See console for details.');
-        }
-    }
-
-
-    // Function to submit a new trip
-    async function submitTrip(event) {
+    tripForm.addEventListener('submit', function(event) {
         event.preventDefault();
 
-        const name = document.getElementById('name').value;
-        const destination = document.getElementById('destination').value;
-        const start_date = document.getElementById('start-date').value;
-        const end_date = document.getElementById('end-date').value;
-        const notes = document.getElementById('notes').value;
+        const name = document.getElementById('trip-name').value;
+        const destination = document.getElementById('trip-destination').value;
+        const startDate = document.getElementById('trip-start-date').value;
+        const endDate = document.getElementById('trip-end-date').value;
+        const notes = document.getElementById('trip-notes').value;
 
-        const newTrip = {
-            name: name,
-            destination: destination,
-            start_date: start_date,
-            end_date: end_date,
-            notes: notes
-        };
-
-        try {
-            const response = await fetch('', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newTrip) });
-            const trip = await response.json();
-            alert('Trip added successfully!');
+        fetch('/', {  // Assuming your FastAPI endpoint is at the root
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: name,
+                destination: destination,
+                start_date: startDate,
+                end_date: endDate,
+                notes: notes
+            })
+        })
+        .then(response => response.json())
+        .then(trip => {
+           // Add the new trip to the list
+            addTripToList(trip);
+            // Clear the form
             tripForm.reset();
-            fetchTrips();
-        } catch (error) {
-            console.error('Error adding trip:', error);
-            alert('Failed to add trip. See console for details.');
-        }
+        })
+        .catch(error => console.error('Error:', error));
+    });
+
+    // Trip List
+    const tripList = document.getElementById('trip-items');
+    fetch('/data') // Assumes you add an endpoint '/data' that returns trips
+        .then(response => response.json())
+        .then(trips => {
+            trips.forEach(trip => addTripToList(trip));
+        })
+        .catch(error => console.error('Error:', error));
+
+    function addTripToList(trip) {
+        const listItem = document.createElement('li');
+        listItem.textContent = `${trip.name} - ${trip.destination}`;
+        tripList.appendChild(listItem);
     }
 
+    // AI Chat Panel
+    const userInput = document.getElementById('user-input');
+    const sendButton = document.getElementById('send-button');
+    const chatLog = document.getElementById('chat-log');
 
-    function fetchIntelligence() {
-      const tripId = tripSelect.value;
-      if (tripId) {
-        fetch(`/intelligence/${tripId}`) 
-          .then(response => response.json()) 
-          .then(data => {
-            briefingContent.innerHTML = `<p>${data.intelligence}</p>`;
-          }) 
-          .catch(error => {
-            console.error('Error fetching intelligence:', error);
-            briefingContent.innerHTML = '<p>Failed to fetch intelligence briefing.</p>';
-          });
-      } else {
-        briefingContent.innerHTML = '';
-      }
-    }
+    sendButton.addEventListener('click', function() {
+        const message = userInput.value;
 
-    tripForm.addEventListener('submit', submitTrip);
-    fetchTrips(); // Initial fetch
+        fetch('/ai/chat', {  // Assuming your FastAPI endpoint is at /ai/chat
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                message: message
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.ai_response) {
+                const userMessage = document.createElement('p');
+                userMessage.textContent = `You: ${message}`;
+                chatLog.appendChild(userMessage);
+
+                const aiResponse = document.createElement('p');
+                aiResponse.textContent = `AI: ${data.ai_response}`;
+                chatLog.appendChild(aiResponse);
+
+                chatLog.scrollTop = chatLog.scrollHeight;
+            } else if (data.error) {
+                console.error('AI Chat Error:', data.error);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+
+        userInput.value = '';
+    });
+
 });
