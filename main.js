@@ -1,89 +1,83 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Registration form
-    const tripForm = document.getElementById('trip-form');
+    const tripForm = document.getElementById('tripForm');
+    const tripList = document.getElementById('tripList');
+    const generateIntelligenceButton = document.getElementById('generateIntelligenceButton');
+    const chatLog = document.getElementById('chatLog');
+    const chatInput = document.getElementById('chatInput');
+    const sendButton = document.getElementById('sendButton');
+
     tripForm.addEventListener('submit', function(event) {
         event.preventDefault();
 
-        const name = document.getElementById('trip-name').value;
-        const destination = document.getElementById('trip-destination').value;
-        const startDate = document.getElementById('trip-start-date').value;
-        const endDate = document.getElementById('trip-end-date').value;
-        const notes = document.getElementById('trip-notes').value;
+        const tripData = {
+            name: document.getElementById('tripName').value,
+            destination: document.getElementById('tripDestination').value,
+            start_date: document.getElementById('tripStartDate').value,
+            end_date: document.getElementById('tripEndDate').value,
+            notes: document.getElementById('tripNotes').value
+        };
 
-        fetch('/', {  // Assuming your FastAPI endpoint is at the root
+        fetch('/' , { // POST to / for trip creation
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                name: name,
-                destination: destination,
-                start_date: startDate,
-                end_date: endDate,
-                notes: notes
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(tripData)
+        }) .then(response => response.json())
+            .then(trip => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${trip.name} - ${trip.destination} (ID: ${trip.id})`;
+                tripList.appendChild(listItem);
             })
-        })
-        .then(response => response.json())
-        .then(trip => {
-           // Add the new trip to the list
-            addTripToList(trip);
-            // Clear the form
-            tripForm.reset();
-        })
-        .catch(error => console.error('Error:', error));
+            .catch(error => console.error('Error creating trip:', error));
+
+        // Clear the form
+        tripForm.reset();
     });
 
-    // Trip List
-    const tripList = document.getElementById('trip-items');
-    fetch('/data') // Assumes you add an endpoint '/data' that returns trips
+    // Fetch and display existing trips
+    fetch('/' )  // GET from / to fetch all trips
         .then(response => response.json())
         .then(trips => {
-            trips.forEach(trip => addTripToList(trip));
+            trips.forEach(trip => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${trip.name} - ${trip.destination} (ID: ${trip.id})`;
+                tripList.appendChild(listItem);
+            });
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => console.error('Error fetching trips:', error));
 
-    function addTripToList(trip) {
-        const listItem = document.createElement('li');
-        listItem.textContent = `${trip.name} - ${trip.destination}`;
-        tripList.appendChild(listItem);
-    }
+    generateIntelligenceButton.addEventListener('click', function() {
+        const selectedTripId = parseInt(tripList.children[0].textContent.split(' (ID: ')[1].trim()); // Assuming first trip is selected for now
 
-    // AI Chat Panel
-    const userInput = document.getElementById('user-input');
-    const sendButton = document.getElementById('send-button');
-    const chatLog = document.getElementById('chat-log');
-
-    sendButton.addEventListener('click', function() {
-        const message = userInput.value;
-
-        fetch('/ai/chat', {  // Assuming your FastAPI endpoint is at /ai/chat
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                message: message
+        fetch('/generate_intelligence/' + selectedTripId, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data.message); // Display success message
             })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.ai_response) {
-                const userMessage = document.createElement('p');
-                userMessage.textContent = `You: ${message}`;
-                chatLog.appendChild(userMessage);
-
-                const aiResponse = document.createElement('p');
-                aiResponse.textContent = `AI: ${data.ai_response}`;
-                chatLog.appendChild(aiResponse);
-
-                chatLog.scrollTop = chatLog.scrollHeight;
-            } else if (data.error) {
-                console.error('AI Chat Error:', data.error);
-            }
-        })
-        .catch(error => console.error('Error:', error));
-
-        userInput.value = '';
+            .catch(error => console.error('Error generating intelligence:', error));
     });
 
+    sendButton.addEventListener('click', function() {
+        const message = chatInput.value;
+
+        if (message.trim() !== '') {
+            const messageElement = document.createElement('p');
+            messageElement.textContent = 'You: ' + message;
+            chatLog.appendChild(messageElement);
+
+            chatInput.value = '';
+
+            // Simulate AI response (replace with actual AI logic)
+            setTimeout(() => {
+                const aiResponseElement = document.createElement('p');
+                aiResponseElement.textContent = 'AI: Here is your response.';
+                chatLog.appendChild(aiResponseElement);
+            }, 1000);
+        }
+    });
+
+    chatInput.addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            sendButton.click();
+        }
+    });
 });
