@@ -47,12 +47,12 @@ class Trip(BaseModel):
 @app.get("", response_model=List[Trip])
 def list_trips():
     customer.execute('SELECT * FROM trips')
-rows = customer.fetchall()
-trips = []
-for row in rows:
-    trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
-trips.append(trip)
-return trips
+    rows = customer.fetchall()
+    trips = []
+    for row in rows:
+        trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
+        trips.append(trip)
+    return trips
 
 @app.post("", response_model=Trip)
 def create_trip(trip: Trip):
@@ -65,7 +65,7 @@ def create_trip(trip: Trip):
 @app.get('/{trip_id}', response_model=Trip)
 def read_trip(trip_id: int):
     customer.execute('SELECT * FROM trips WHERE id = ?', (trip_id,))
-row = customer.fetchone()
+    row = customer.fetchone()
     if not row:
         raise fastapi.HTTPException(status_code=404, detail="Trip not found")
     trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
