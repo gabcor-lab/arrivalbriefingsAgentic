@@ -70,17 +70,3 @@ row = customer.fetchone()
         raise fastapi.HTTPException(status_code=404, detail="Trip not found")
     trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
     return trip
-
-@app.put('/{trip_id}', response_model=Trip)
-def update_trip(trip_id: int, trip: Trip):
-    customer.execute("UPDATE trips SET name = ?, destination = ?, start_date = ?, end_date = ?, notes = ? WHERE id = ?",
-                   (trip.name, trip.destination, trip.start_date, trip.end_date, trip.notes, trip_id))
-    conn.commit()
-    trip.id = trip_id
-    return trip
-
-@app.delete('/{trip_id}')
-def delete_trip(trip_id: int):
-    customer.execute('DELETE FROM trips WHERE id = ?', (trip_id,))
-    conn.commit()
-    return {"message": "Trip deleted successfully"}

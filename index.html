@@ -1,34 +1,33 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trip Registration Form</title>
-    <link rel="stylesheet" href="style.css">
+<title>Trip Registration</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Trip Registration</h1>
-    <form id="tripForm">
-        <label for="tripName">Trip Name:</label><br>
-        <input type="text" id="tripName" name="tripName" required><br><br>
 
-        <label for="tripDestination">Destination:</label><br>
-        <input type="text" id="tripDestination" name="tripDestination" required><br><br>
+<h1 id="tripHeading">Trip Registration</h1>
 
-        <label for="tripStartDate">Start Date:</label><br>
-        <input type="date" id="tripStartDate" name="tripStartDate"><br><br>
+<form id="tripForm">
+  <label for="tripName">Trip Name:</label><br>
+  <input type="text" id="tripName" name="tripName"><br><br>
 
-        <label for="tripEndDate">End Date:</label><br>
-        <input type="date" id="tripEndDate" name="tripEndDate"><br><br>
+  <label for="tripDestination">Destination:</label><br>
+  <input type="text" id="tripDestination" name="tripDestination"><br><br>
 
-        <label for="tripNotes">Notes:</label><br>
-        <textarea id="tripNotes" name="tripNotes" rows="4" cols="50"></textarea><br><br>
+  <label for="tripStartDate">Start Date:</label><br>
+  <input type="date" id="tripStartDate" name="tripStartDate"><br><br>
 
-        <button type="submit">Register Trip</button>
-    </form>
-    <ul id="tripList">
-    </ul>
+  <label for="tripEndDate">End Date:</label><br>
+  <input type="date" id="tripEndDate" name="tripEndDate"><br><br>
 
-    <script src="main.js"></script>
+  <label for="tripNotes">Notes:</label><br>
+  <textarea id="tripNotes" name="tripNotes"></textarea><br><br>
+
+  <button type="button" id="registerTrip">Register Trip</button>
+</form>
+
+<ul id="tripList"></ul>
+
+<script src="main.js"></script>
 </body>
 </html>
