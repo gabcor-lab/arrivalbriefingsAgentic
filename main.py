@@ -70,3 +70,29 @@ def read_trip(trip_id: int):
         raise fastapi.HTTPException(status_code=404, detail="Trip not found")
     trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
     return trip
+
+
+@app.post('/{trip_id}/briefing')
+def generate_briefing(trip_id: int):
+    """Generates a travel briefing for a given trip using Ollama."""
+    customer.execute('SELECT name, destination, start_date, end_date, notes FROM trips WHERE id = ?', (trip_id,))
+    trip_data = customer.fetchone()
+    if not trip_data:
+        raise fastapi.HTTPException(status_code=404, detail="Trip not found")
+
+    trip_name = trip_data[0]
+    destination = trip_data[1]
+    start_date = trip_data[2]
+    end_date = trip_data[3]
+    notes = trip_data[4]
+
+    # Construct the prompt
+    prompt = f"Generate a travel briefing for a trip to {destination}. The trip is named '{trip_name}'. The start date is {start_date} and the end date is {end_date}.  Include weather forecasts, potential safety concerns, and any other relevant information. Notes: {notes}."
+
+    try:
+        response = ollama.generate(model='llama2', prompt=prompt)
+        briefing = response.response
+        return {"trip_id": trip_id, "briefing": briefing}
+
+    except Exception as e:
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
