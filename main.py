@@ -49,10 +49,11 @@ def name_must_be_valid(self, value):
 def list_trips():
     customer.execute('SELECT * FROM trips')
 rows = customer.fetchall()
+
 trips = []
 for row in rows:
     trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
-trips.append(trip)
+    trips.append(trip)
 return trips
 
 
@@ -95,14 +96,22 @@ prompt = f"Generate a travel briefing for a trip to {destination}. The trip is n
     try:
         # Use Ollama to generate the briefing
         response = ollama.generate(prompt)
-        briefing = response.response.strip()
+        briefing = response.response
 
-        # Update the trip with the generated briefing
-        customer.execute("UPDATE trips SET intelligence_data = ? WHERE id = ?", (briefing, trip_id))
+        # Update the trip's intelligence data
+        customer.execute(
+            "UPDATE trips SET intelligence_data = ? WHERE id = ?",
+            (briefing, trip_id)
+        )
         conn.commit()
 
         return {"briefing": briefing}
 
     except Exception as e:
-        print(f"Error generating briefing: {e}")
-        return {"error": str(e)},
+        print(f"Ollama API error: {e}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
+
+
+if __name__ == '__main__':
+    import uvicorn
+    uvicorn.run(app, host='0.0.0.0', port=8000)
