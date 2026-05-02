@@ -39,20 +39,22 @@ class Trip(BaseModel):
     intelligence_data: Optional[str] = None
 
     @validator('name')
-    def name_must_be_valid(self, value):
+def name_must_be_valid(self, value):
         if not value:
             raise ValueError('Name cannot be empty')
         return value
 
+
 @app.get("", response_model=List[Trip])
 def list_trips():
     customer.execute('SELECT * FROM trips')
-    rows = customer.fetchall()
-    trips = []
-    for row in rows:
-        trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
-        trips.append(trip)
-    return trips
+rows = customer.fetchall()
+trips = []
+for row in rows:
+    trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
+trips.append(trip)
+return trips
+
 
 @app.post("", response_model=Trip)
 def create_trip(trip: Trip):
@@ -62,37 +64,45 @@ def create_trip(trip: Trip):
     trip.id = customer.lastrowid
     return trip
 
+
 @app.get('/{trip_id}', response_model=Trip)
 def read_trip(trip_id: int):
     customer.execute('SELECT * FROM trips WHERE id = ?', (trip_id,))
-    row = customer.fetchone()
-    if not row:
-        raise fastapi.HTTPException(status_code=404, detail="Trip not found")
-    trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
-    return trip
+row = customer.fetchone()
+if not row:
+    raise fastapi.HTTPException(status_code=404, detail="Trip not found")
+trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
+return trip
 
 
 @app.post('/{trip_id}/briefing')
 def generate_briefing(trip_id: int):
     """Generates a travel briefing for a given trip using Ollama."""
     customer.execute('SELECT name, destination, start_date, end_date, notes FROM trips WHERE id = ?', (trip_id,))
-    trip_data = customer.fetchone()
-    if not trip_data:
-        raise fastapi.HTTPException(status_code=404, detail="Trip not found")
+trip_data = customer.fetchone()
+if not trip_data:
+    raise fastapi.HTTPException(status_code=404, detail="Trip not found")
 
-    trip_name = trip_data[0]
-    destination = trip_data[1]
-    start_date = trip_data[2]
-    end_date = trip_data[3]
-    notes = trip_data[4]
+trip_name = trip_data[0]
+destination = trip_data[1]
+start_date = trip_data[2]
+end_date = trip_data[3]
+notes = trip_data[4]
 
     # Construct the prompt
-    prompt = f"Generate a travel briefing for a trip to {destination}. The trip is named '{trip_name}'. The start date is {start_date} and the end date is {end_date}.  Include weather forecasts, potential safety concerns, and any other relevant information. Notes: {notes}."
+prompt = f"Generate a travel briefing for a trip to {destination}. The trip is named '{trip_name}'. The start date is {start_date} and the end date is {end_date}.  Include weather forecasts, potential safety concerns, and any other relevant information."
 
     try:
-        response = ollama.generate(model='llama2', prompt=prompt)
-        briefing = response.response
-        return {"trip_id": trip_id, "briefing": briefing}
+        # Use Ollama to generate the briefing
+        response = ollama.generate(prompt)
+        briefing = response.response.strip()
+
+        # Update the trip with the generated briefing
+        customer.execute("UPDATE trips SET intelligence_data = ? WHERE id = ?", (briefing, trip_id))
+        conn.commit()
+
+        return {"briefing": briefing}
 
     except Exception as e:
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        print(f"Error generating briefing: {e}")
+        return {"error": str(e)},
