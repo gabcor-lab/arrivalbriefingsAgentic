@@ -84,28 +84,16 @@ def generate_briefing(trip_id: int):
         raise fastapi.HTTPException(status_code=404, detail="Trip not found")
 
     trip_name = trip_data[0]
-    destination = trip_data[1]
+destination = trip_data[1]
     start_date = trip_data[2]
     end_date = trip_data[3]
     notes = trip_data[4]
 
     # Construct the prompt
-    prompt = f"Generate a travel briefing for a trip to {destination}. The trip is named '{trip_name}'. The start date is {start_date} and the end date is {end_date}.  Include weather forecasts, potential safety concerns, and any other relevant information."
+    prompt = f"Generate a travel briefing for a trip to {destination}. The trip is named '{trip_name}'. The start date is {start_date} and the end date is {end_date}.  Include weather forecasts, potential safety concerns, and any other relevant information for the traveler."
 
     try:
-        response = ollama.chat(model='llama2', messages=[{"role": "user", "content": prompt}])
-        briefing = response['message']['content']
+        response = ollama.generate(model='llama2', prompt=prompt)
+        return {"briefing": response['response']}
     except Exception as e:
-        briefing = f"Error generating briefing: {str(e)}"
-
-    # Update the trip with the generated briefing
-    customer.execute("UPDATE trips SET intelligence_data = ? WHERE id = ?", (briefing, trip_id))
-    conn.commit()
-
-    return {"briefing": briefing}
-
-
-@app.get('/health')
-def health_check():
-    return {"status": "ok"}
-
+        return {"error": str(e)}
