@@ -68,7 +68,7 @@ def create_trip(trip: Trip):
 @app.get('/{trip_id}', response_model=Trip)
 def read_trip(trip_id: int):
     customer.execute('SELECT * FROM trips WHERE id = ?', (trip_id,))
-    row = customer.fetchone()
+row = customer.fetchone()
     if not row:
         raise fastapi.HTTPException(status_code=404, detail="Trip not found")
     trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
@@ -79,22 +79,21 @@ def read_trip(trip_id: int):
 def generate_briefing(trip_id: int):
     """Generates a travel briefing for a given trip using Ollama."""
     customer.execute('SELECT name, destination, start_date, end_date, notes FROM trips WHERE id = ?', (trip_id,))
-    trip_data = customer.fetchone()
+trip_data = customer.fetchone()
     if not trip_data:
         raise fastapi.HTTPException(status_code=404, detail="Trip not found")
 
     trip_name = trip_data[0]
-destination = trip_data[1]
+    destination = trip_data[1]
     start_date = trip_data[2]
     end_date = trip_data[3]
     notes = trip_data[4]
 
     # Construct the prompt
-    prompt = f"""Generate a travel briefing for a trip to {destination}. The trip is named '{trip_name}'. The start date is {start_date} and the end date is {end_date}.  Include weather forecasts, potential safety concerns, and any other relevant information.  Notes: {notes}"""
-
+    prompt = f"""Generate a travel briefing for a trip to {destination}. The trip is named '{trip_name}'. The start date is {start_date} and the end date is {end_date}.  Include weather forecasts, potential safety concerns, and any other relevant information."""
     try:
-        response = ollama.generate(model='ollama/lightai', prompt=prompt)
-        briefing = response['response']
-        return {"briefing": briefing}
+        response = ollama.generate(model='llama2', prompt=prompt)
+        return {"briefing": response['response']}
     except Exception as e:
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        print(f"Error generating briefing: {e}")
+        return {"error": str(e)}
