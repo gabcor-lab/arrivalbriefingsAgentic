@@ -90,12 +90,16 @@ trip_data = customer.fetchone()
     notes = trip_data[4]
 
     # Construct the prompt
-    prompt = f'''Generate a travel briefing for a trip to {destination}. The trip is named '{trip_name}'. The start date is {start_date} and the end date is {end_date}.  Include weather forecasts, potential safety concerns, and any other relevant information.  Assume the traveler is familiar with technology and appreciates concise, actionable advice.  Format the response as a markdown list. ''''
+    prompt = f'''Generate a travel briefing for a trip to {destination}. The trip is named '{trip_name}'. The start date is {start_date} and the end date is {end_date}.  Include weather forecasts, potential safety concerns, and any other relevant information.  Also include suggested activities and restaurant recommendations.  Format the briefing as a markdown document. The notes for the trip are: {notes}'''
 
     try:
-        response = ollama.chat(model='llama2', messages=[{"role": "user", "content": prompt}])
+        response = ollama.chat(model='llama2', messages=[{
+            "role": "user",
+            "content": prompt
+        }])
         briefing = response['message']['content']
 
+        # Store the briefing in the database
         customer.execute("UPDATE trips SET intelligence_data = ? WHERE id = ?", (briefing, trip_id))
         conn.commit()
 
