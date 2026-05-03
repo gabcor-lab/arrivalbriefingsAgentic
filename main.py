@@ -49,12 +49,11 @@ def name_must_be_valid(self, value):
 def list_trips():
     customer.execute('SELECT * FROM trips')
 rows = customer.fetchall()
-
-trips = []
-for row in rows:
-    trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
-    trips.append(trip)
-return trips
+    trips = []
+    for row in rows:
+        trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
+        trips.append(trip)
+    return trips
 
 
 @app.post("", response_model=Trip)
@@ -69,49 +68,44 @@ def create_trip(trip: Trip):
 @app.get('/{trip_id}', response_model=Trip)
 def read_trip(trip_id: int):
     customer.execute('SELECT * FROM trips WHERE id = ?', (trip_id,))
-row = customer.fetchone()
-if not row:
-    raise fastapi.HTTPException(status_code=404, detail="Trip not found")
-trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
-return trip
+    row = customer.fetchone()
+    if not row:
+        raise fastapi.HTTPException(status_code=404, detail="Trip not found")
+    trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
+    return trip
 
 
 @app.post('/{trip_id}/briefing')
 def generate_briefing(trip_id: int):
     """Generates a travel briefing for a given trip using Ollama."""
     customer.execute('SELECT name, destination, start_date, end_date, notes FROM trips WHERE id = ?', (trip_id,))
-trip_data = customer.fetchone()
-if not trip_data:
-    raise fastapi.HTTPException(status_code=404, detail="Trip not found")
+    trip_data = customer.fetchone()
+    if not trip_data:
+        raise fastapi.HTTPException(status_code=404, detail="Trip not found")
 
-trip_name = trip_data[0]
-destination = trip_data[1]
-start_date = trip_data[2]
-end_date = trip_data[3]
-notes = trip_data[4]
+    trip_name = trip_data[0]
+    destination = trip_data[1]
+    start_date = trip_data[2]
+    end_date = trip_data[3]
+    notes = trip_data[4]
 
     # Construct the prompt
-prompt = f"Generate a travel briefing for a trip to {destination}. The trip is named '{trip_name}'. The start date is {start_date} and the end date is {end_date}.  Include weather forecasts, potential safety concerns, and any other relevant information."
+    prompt = f"Generate a travel briefing for a trip to {destination}. The trip is named '{trip_name}'. The start date is {start_date} and the end date is {end_date}.  Include weather forecasts, potential safety concerns, and any other relevant information."
 
     try:
-        # Use Ollama to generate the briefing
-        response = ollama.generate(prompt)
-        briefing = response.response
-
-        # Update the trip's intelligence data
-        customer.execute(
-            "UPDATE trips SET intelligence_data = ? WHERE id = ?",
-            (briefing, trip_id)
-        )
-        conn.commit()
-
-        return {"briefing": briefing}
-
+        response = ollama.chat(model='llama2', messages=[{"role": "user", "content": prompt}])
+        briefing = response['message']['content']
     except Exception as e:
-        print(f"Ollama API error: {e}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        briefing = f"Error generating briefing: {str(e)}"
+
+    # Update the trip with the generated briefing
+    customer.execute("UPDATE trips SET intelligence_data = ? WHERE id = ?", (briefing, trip_id))
+    conn.commit()
+
+    return {"briefing": briefing}
 
 
-if __name__ == '__main__':
-    import uvicorn
-    uvicorn.run(app, host='0.0.0.0', port=8000)
+@app.get('/health')
+def health_check():
+    return {"status": "ok"}
+
