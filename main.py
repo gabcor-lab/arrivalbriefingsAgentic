@@ -90,10 +90,21 @@ trip_data = customer.fetchone()
     notes = trip_data[4]
 
     # Construct the prompt
-    prompt = f"""Generate a travel briefing for a trip to {destination}. The trip is named '{trip_name}'. The start date is {start_date} and the end date is {end_date}.  Include weather forecasts, potential safety concerns, and any other relevant information."""
+    prompt = f'''Generate a travel briefing for a trip to {destination}. The trip is named '{trip_name}'. The start date is {start_date} and the end date is {end_date}.  Include weather forecasts, potential safety concerns, and any other relevant information.  Assume the traveler is familiar with technology and appreciates concise, actionable advice.  Format the response as a markdown list. ''''
+
     try:
-        response = ollama.generate(model='llama2', prompt=prompt)
-        return {"briefing": response['response']}
+        response = ollama.chat(model='llama2', messages=[{"role": "user", "content": prompt}])
+        briefing = response['message']['content']
+
+        customer.execute("UPDATE trips SET intelligence_data = ? WHERE id = ?", (briefing, trip_id))
+        conn.commit()
+
+        return {"briefing": briefing}
     except Exception as e:
         print(f"Error generating briefing: {e}")
-        return {"error": str(e)}
+        raise fastapi.HTTPException(status_code=500, detail="Failed to generate briefing")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
