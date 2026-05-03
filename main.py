@@ -90,10 +90,23 @@ destination = trip_data[1]
     notes = trip_data[4]
 
     # Construct the prompt
-    prompt = f"Generate a travel briefing for a trip to {destination}. The trip is named '{trip_name}'. The start date is {start_date} and the end date is {end_date}.  Include weather forecasts, potential safety concerns, and any other relevant information for the traveler."
+    prompt = f"Generate a travel briefing for a trip to {destination}. The trip is named '{trip_name}'. The start date is {start_date} and the end date is {end_date}.  Include weather forecasts, potential safety concerns, and any other relevant information."""
 
     try:
-        response = ollama.generate(model='llama2', prompt=prompt)
-        return {"briefing": response['response']}
+        response = ollama.chat(model='llama2', messages=[{'role': 'user', 'content': prompt}])
+        briefing = response['response']
     except Exception as e:
-        return {"error": str(e)}
+        briefing = f"Error generating briefing: {e}"
+
+    # Update the trip with the generated briefing
+    customer.execute("UPDATE trips SET intelligence_data = ? WHERE id = ?", (briefing, trip_id))
+    conn.commit()
+
+    return {"briefing": briefing}
+
+
+@app.delete('/{trip_id}')
+def delete_trip(trip_id: int):
+    customer.execute('DELETE FROM trips WHERE id = ?', (trip_id,))
+    conn.commit()
+    return {"message": "Trip deleted successfully"}
