@@ -90,12 +90,23 @@ trip_data = customer.fetchone()
     notes = trip_data[4]
 
     # Construct the prompt
-    prompt = f'''Generate a travel briefing for a trip to {destination}. The trip is named '{trip_name}'. The start date is {start_date} and the end date is {end_date}.  Include weather forecasts, potential safety concerns, and any other relevant information'''
+    prompt = f'''Generate a travel briefing for a trip to {destination}. The trip is named '{trip_name}'. The start date is {start_date} and the end date is {end_date}.  Include weather forecasts, potential safety concerns, and any other relevant info'\n'''
 
-    # Call Ollama API
-    response = ollama.generate(model='llama2', prompt=prompt)
+    try:
+        response = ollama.generate(model='llama2', prompt=prompt)
+        briefing = response.response
 
-    return {"briefing": response.response}
+        # Store the briefing in the database
+        customer.execute(
+            '''UPDATE trips SET intelligence_data = ? WHERE id = ?''',
+            (briefing, trip_id)
+        )
+        conn.commit()
+
+        return {"briefing": briefing}
+    except Exception as e:
+        print(f"Error generating briefing: {e}")
+        return {"error": str(e)}
 
 
 if __name__ == "__main__":
