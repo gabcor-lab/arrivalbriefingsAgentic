@@ -1,59 +1,74 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const tripForm = document.getElementById('tripForm');
-  const tripList = document.getElementById('tripList');
-  const tripHeading = document.getElementById('tripHeading');
+// main.js
+const apiUrl = 'http://localhost:8000';
 
-  tripForm.addEventListener('submit', (event) => {
-    event.preventDefault();
+const tripForm = document.getElementById('tripForm');
+tripForm.addEventListener('submit', function(event) {
+  event.preventDefault();
+  registerTrip();
+});
 
-    const tripName = document.getElementById('tripName').value;
-    const tripDestination = document.getElementById('tripDestination').value;
-    const tripStartDate = document.getElementById('tripStartDate').value;
-    const tripEndDate = document.getElementById('tripEndDate').value;
-    const tripNotes = document.getElementById('tripNotes').value;
+async function registerTrip() {
+  const destination = document.getElementById('destination').value;
+  const arrivalDate = document.getElementById('arrivalDate').value;
+  const departureDate = document.getElementById('departureDate').value;
+  const travelerType = document.getElementById('travelerType').value;
+  const preferences = document.getElementById('preferences').value;
 
-    const newTrip = {
-      name: tripName,
-      destination: tripDestination,
-      start_date: tripStartDate,
-      end_date: tripEndDate,
-      notes: tripNotes
-    };
+  const tripData = {
+    destination: destination,
+    arrival_date: arrivalDate,
+    departure_date: departureDate,
+    traveler_type: travelerType,
+    preferences: preferences
+  };
 
-    fetch('/', {  // Corrected endpoint
+  try {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(newTrip)
-    })
-    .then(response => response.json())
-    .then(data => {
-      // Display the newly created trip
-      const li = document.createElement('li');
-      li.textContent = `${data.name} - ${data.destination} - ${data.start_date} - ${data.end_date} - ${data.notes}`;
-      tripList.appendChild(li);
+      body: JSON.stringify(tripData)
+    });
 
-      // Clear the form
+    if (response.ok) {
+      const newTrip = await response.json();
+      displayTrip(newTrip);
       tripForm.reset();
-    })
-    .catch(error => {
-      console.error('Error creating trip:', error);
-      alert('Failed to register trip. See console for details.');
-    });
-  });
+    } else {
+      console.error('Error registering trip:', response.status);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
 
-  // Fetch and display existing trips
-  fetch('/' ){
-    .then(response => response.json())
-    .then(data => {
-      data.forEach(trip => {
-        const li = document.createElement('li');
-        li.textContent = `${trip.name} - ${trip.destination} - ${trip.start_date} - ${trip.end_date} - ${trip.notes}`;
-        tripList.appendChild(li);
-      });
-    })
-    .catch(error => {
-      console.error('Error fetching trips:', error);
+// Function to display trips
+async function displayTrips() {
+  const tripItems = document.getElementById('tripItems');
+  tripItems.innerHTML = ''; // Clear existing trips
+
+  try {
+    const response = await fetch(apiUrl);
+    const trips = await response.json();
+
+    trips.forEach(trip => {
+      const li = document.createElement('li');
+      li.textContent = `ID: ${trip.id}, Destination: ${trip.destination}, Arrival: ${trip.arrival_date}, Departure: ${trip.departure_date}, Type: ${trip.traveler_type}`;
+      tripItems.appendChild(li);
     });
-});
+  } catch (error) {
+    console.error('Error fetching trips:', error);
+  }
+}
+
+// Initial display of registered trips
+
+async function displayTrip(trip) {
+    const tripItems = document.getElementById('tripItems');
+    const li = document.createElement('li');
+    li.textContent = `ID: ${trip.id}, Destination: ${trip.destination}, Arrival: ${trip.arrival_date}, Departure: ${trip.departure_date}, Type: ${trip.traveler_type}`;
+    tripItems.appendChild(li);
+}
+
+displayTrips();

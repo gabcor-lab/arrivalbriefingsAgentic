@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trip Registration</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1">Trip Registration</h1>
+    <div id="container">
+        <form id="tripForm">
+            <label for="destination">Destination:</label>
+            <input type="text" id="destination" name="destination" required><br><br>
+
+            <label for="arrivalDate">Arrival Date:</label>
+            <input type="date" id="arrivalDate" name="arrivalDate" required><br><br>
+
+            <label for="departureDate">Departure Date:</label>
+            <input type="date" id="departureDate" name="departureDate" required><br><br>
+
+            <label for="travelerType">Traveler Type:</label>
+            <input type="text" id="travelerType" name="travelerType" required><br><br>
+
+            <label for="preferences">Preferences:</label>
+            <textarea id="preferences" name="preferences"></textarea><br><br>
+
+            <button type="button" onclick="registerTrip()">Register Trip</button>
+        </form>
+
+        <div id="tripList"><h2">Registered Trips</h2>
+            <ul id="tripItems"></ul>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>

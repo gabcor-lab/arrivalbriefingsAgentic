@@ -18,97 +18,119 @@ customer.execute(
     '''
     CREATE TABLE IF NOT EXISTS trips (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
         destination TEXT NOT NULL,
-        start_date TEXT,
-        end_date TEXT,
-        notes TEXT,
-        intelligence_data TEXT
+        arrival_date TEXT NOT NULL,
+        departure_date TEXT NOT NULL,
+        traveler_type TEXT NOT NULL,
+        preferences TEXT,
+        briefing_json TEXT
     )
     '''
 )
 conn.commit()
 
-class Trip(BaseModel):
-    id: Optional[int] = None
-    name: str
+class TripCreate(BaseModel):
     destination: str
-    start_date: Optional[str] = None
-    end_date: Optional[str] = None
-    notes: Optional[str] = None
-    intelligence_data: Optional[str] = None
+    arrival_date: str
+    departure_date: str
+    traveler_type: str
+    preferences: Optional[str] = None
 
-    @validator('name')
-def name_must_be_valid(self, value):
+    @validator('destination')
+def destination_must_be_valid(self, value):
         if not value:
-            raise ValueError('Name cannot be empty')
+            raise ValueError('Destination cannot be empty')
         return value
 
+class TripResponse(BaseModel):
+    id: Optional[int] = None
+    destination: str
+    arrival_date: str
+    departure_date: str
+    traveler_type: str
+    preferences: Optional[str] = None
+    briefing_json: Optional[str] = None
 
-@app.get("", response_model=List[Trip])
+
+@app.get("", response_model=List[TripResponse])
 def list_trips():
     customer.execute('SELECT * FROM trips')
 rows = customer.fetchall()
     trips = []
     for row in rows:
-        trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
+        trip = TripResponse(id=row[0], destination=row[1], arrival_date=row[2], departure_date=row[3], traveler_type=row[4], preferences=row[5], briefing_json=row[6])
         trips.append(trip)
     return trips
 
 
-@app.post("", response_model=Trip)
-def create_trip(trip: Trip):
-    customer.execute("INSERT INTO trips (name, destination, start_date, end_date, notes) VALUES (?, ?, ?, ?, ?)",
-                   (trip.name, trip.destination, trip.start_date, trip.end_date, trip.notes))
+@app.post("", response_model=TripResponse)
+def create_trip(trip: TripCreate):
+    customer.execute("INSERT INTO trips (destination, arrival_date, departure_date, traveler_type, preferences) VALUES (?, ?, ?, ?, ?)",
+                   (trip.destination, trip.arrival_date, trip.departure_date, trip.traveler_type, trip.preferences))
     conn.commit()
     trip.id = customer.lastrowid
     return trip
 
 
-@app.get('/{trip_id}', response_model=Trip)
-def read_trip(trip_id: int):
-    customer.execute('SELECT * FROM trips WHERE id = ?', (trip_id,))
+@app.get('/{id}', response_model=TripResponse)
+def read_trip(id: int):
+    customer.execute('SELECT * FROM trips WHERE id = ?', (id,))
 row = customer.fetchone()
     if not row:
         raise fastapi.HTTPException(status_code=404, detail="Trip not found")
-    trip = Trip(id=row[0], name=row[1], destination=row[2], start_date=row[3], end_date=row[4], notes=row[5], intelligence_data=row[6])
+    trip = TripResponse(id=row[0], destination=row[1], arrival_date=row[2], departure_date=row[3], traveler_type=row[4], preferences=row[5], briefing_json=row[6])
     return trip
 
 
-@app.post('/{trip_id}/briefing')
-def generate_briefing(trip_id: int):
+@app.delete('/{id}')
+def delete_trip(id: int):
+    customer.execute('DELETE FROM trips WHERE id = ?', (id,))
+    conn.commit()
+    return {"message": "Trip deleted successfully"}
+
+
+@app.post('/{id}/briefing')
+def generate_briefing(id: int):
     """Generates a travel briefing for a given trip using Ollama."""
-    customer.execute('SELECT name, destination, start_date, end_date, notes FROM trips WHERE id = ?', (trip_id,))
+    customer.execute('SELECT destination, arrival_date, departure_date, traveler_type, preferences FROM trips WHERE id = ?', (id,))
 trip_data = customer.fetchone()
     if not trip_data:
         raise fastapi.HTTPException(status_code=404, detail="Trip not found")
+    destination = trip_data[0]
+    arrival_date = trip_data[1]
+    departure_date = trip_data[2]
+    traveler_type = trip_data[3]
+    preferences = trip_data[4]
 
-    trip_name = trip_data[0]
-    destination = trip_data[1]
-    start_date = trip_data[2]
-    end_date = trip_data[3]
-    notes = trip_data[4]
-
-    # Construct the prompt
-    prompt = f'''Generate a travel briefing for a trip to {destination}. The trip is named '{trip_name}'. The start date is {start_date} and the end date is {end_date}.  Include weather forecasts, potential safety concerns, and any other relevant info'\n'''
+    prompt = f'''
+    Generate a detailed travel briefing for a trip to {destination}.
+    Arrival Date: {arrival_date}
+    Departure Date: {departure_date}
+    Traveler Type: {traveler_type}
+    Preferences: {preferences if preferences else 'None'}
+    Include relevant weather information, local customs, and safety advice.
+    Format as HTML.
+    '''
 
     try:
         response = ollama.generate(model='llama2', prompt=prompt)
-        briefing = response.response
-
-        # Store the briefing in the database
-        customer.execute(
-            '''UPDATE trips SET intelligence_data = ? WHERE id = ?''',
-            (briefing, trip_id)
-        )
+        briefing_html = response.response
+        customer.execute('UPDATE trips SET briefing_json = ? WHERE id = ?', (briefing_html, id))
         conn.commit()
 
-        return {"briefing": briefing}
+        return TripResponse(id=id, destination=destination, arrival_date=arrival_date, departure_date=departure_date, traveler_type=traveler_type, preferences=preferences, briefing_json=briefing_html)
     except Exception as e:
         print(f"Error generating briefing: {e}")
         return {"error": str(e)}
 
 
+@app.get('/static/index.html')
+def serve_static_html():
+    with open('static/index.html', 'r') as file:
+        html_content = file.read()
+    return HTMLResponse(content=html_content)
+
+
 if __name__ == "__main__":
     import uvicorn
-uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
