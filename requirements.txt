@@ -2,3 +2,4 @@ fastapi
 pydantic
 ollama
 uvicorn[standard]
+python-dotenv>=1.2.2

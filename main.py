@@ -96,39 +96,32 @@ def generate_briefing(id: int):
 trip_data = customer.fetchone()
     if not trip_data:
         raise fastapi.HTTPException(status_code=404, detail="Trip not found")
+
     destination = trip_data[0]
     arrival_date = trip_data[1]
     departure_date = trip_data[2]
     traveler_type = trip_data[3]
     preferences = trip_data[4]
 
-    prompt = f'''
-    Generate a detailed travel briefing for a trip to {destination}.
-    Arrival Date: {arrival_date}
-    Departure Date: {departure_date}
-    Traveler Type: {traveler_type}
-    Preferences: {preferences if preferences else 'None'}
-    Include relevant weather information, local customs, and safety advice.
-    Format as HTML.
-    '''
+    prompt = f"Generate a travel briefing for a trip to {destination} arriving on {arrival_date} and departing on {departure_date}. The traveler type is {traveler_type}. Preferences: {preferences}."
 
     try:
         response = ollama.generate(model='llama2', prompt=prompt)
-        briefing_html = response.response
-        customer.execute('UPDATE trips SET briefing_json = ? WHERE id = ?', (briefing_html, id))
+        briefing = response.response
+
+        customer.execute(
+            '''
+            UPDATE trips SET briefing_json = ? WHERE id = ?
+            ''',
+            (briefing, id)
+        )
         conn.commit()
 
-        return TripResponse(id=id, destination=destination, arrival_date=arrival_date, departure_date=departure_date, traveler_type=traveler_type, preferences=preferences, briefing_json=briefing_html)
+        return {"briefing": briefing}
     except Exception as e:
+        # Log the error
         print(f"Error generating briefing: {e}")
-        return {"error": str(e)}
-
-
-@app.get('/static/index.html')
-def serve_static_html():
-    with open('static/index.html', 'r') as file:
-        html_content = file.read()
-    return HTMLResponse(content=html_content)
+        raise fastapi.HTTPException(status_code=500, detail="Failed to generate briefing")
 
 
 if __name__ == "__main__":
