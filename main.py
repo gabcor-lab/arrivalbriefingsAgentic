@@ -7,6 +7,9 @@ import html
 import httpx
 import os
 from fastapi.responses import HTMLResponse
+from intelligence_gatherer import gather_destination_info
+from briefing_generator import generate_ai_briefing
+from chat import chat_with_ollama
 
 app = fastapi.FastAPI()
 
@@ -39,8 +42,9 @@ class TripCreate(BaseModel):
     @validator('destination')
 def destination_must_be_valid(self, value):
         if not value:
-            raise ValueError('Destination cannot be empty')
+            raise ValueError('Destination cannot be empty ')
         return value
+
 
 class TripResponse(BaseModel):
     id: Optional[int] = None
@@ -90,38 +94,43 @@ def delete_trip(id: int):
 
 
 @app.post('/{id}/briefing')
-def generate_briefing(id: int):
+async def generate_briefing(id: int):
     """Generates a travel briefing for a given trip using Ollama."""
     customer.execute('SELECT destination, arrival_date, departure_date, traveler_type, preferences FROM trips WHERE id = ?', (id,))
-trip_data = customer.fetchone()
+    trip_data = customer.fetchone()
     if not trip_data:
         raise fastapi.HTTPException(status_code=404, detail="Trip not found")
 
-    destination = trip_data[0]
-    arrival_date = trip_data[1]
-    departure_date = trip_data[2]
-    traveler_type = trip_data[3]
-    preferences = trip_data[4]
-
-    prompt = f"Generate a travel briefing for a trip to {destination} arriving on {arrival_date} and departing on {departure_date}. The traveler type is {traveler_type}. Preferences: {preferences}."
+    trip_dict = {key: value for key, value in zip(['destination', 'arrival_date', 'departure_date', 'traveler_type', 'preferences'], trip_data)}
 
     try:
-        response = ollama.generate(model='llama2', prompt=prompt)
-        briefing = response.response
-
-        customer.execute(
-            '''
-            UPDATE trips SET briefing_json = ? WHERE id = ?
-            ''',
-            (briefing, id)
-        )
+        briefing = await generate_ai_briefing(trip_dict)
+        customer.execute('UPDATE trips SET briefing_json = ? WHERE id = ?', (briefing, id))
         conn.commit()
+        return {"message": "Briefing generated successfully"}
 
-        return {"briefing": briefing}
     except Exception as e:
-        # Log the error
-        print(f"Error generating briefing: {e}")
-        raise fastapi.HTTPException(status_code=500, detail="Failed to generate briefing")
+        return {"error": str(e)}
+
+
+@app.post('/chat')
+async def create_chat(user_message: str):
+    """Handles chat interactions using Ollama."""
+    try:
+        response = await chat_with_ollama(user_message)
+        return {"response": response}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post('/intelligence/{destination}')
+async def get_intelligence(destination: str):
+    """Gathers destination intelligence from external APIs and DuckDuckGo."""
+    try:
+        intelligence = await gather_destination_info(destination)
+        return intelligence
+    except Exception as e:
+        return {"error": str(e)}
 
 
 if __name__ == "__main__":
