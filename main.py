@@ -96,41 +96,53 @@ def delete_trip(id: int):
 @app.post('/{id}/briefing')
 async def generate_briefing(id: int):
     """Generates a travel briefing for a given trip using Ollama."""
-    customer.execute('SELECT destination, arrival_date, departure_date, traveler_type, preferences FROM trips WHERE id = ?', (id,))
-    trip_data = customer.fetchone()
-    if not trip_data:
+    customer.execute('''SELECT destination, arrival_date, departure_date, traveler_type, preferences FROM trips WHERE id = ?''', (id,))
+    row = customer.fetchone()
+    if not row:
         raise fastapi.HTTPException(status_code=404, detail="Trip not found")
 
-    trip_dict = {key: value for key, value in zip(['destination', 'arrival_date', 'departure_date', 'traveler_type', 'preferences'], trip_data)}
+    trip_data = {
+        'destination': row[0],
+        'arrival_date': row[1],
+        'departure_date': row[2],
+        'traveler_type': row[3],
+        'preferences': row[4]
+    }
 
-    try:
-        briefing = await generate_ai_briefing(trip_dict)
-        customer.execute('UPDATE trips SET briefing_json = ? WHERE id = ?', (briefing, id))
-        conn.commit()
-        return {"message": "Briefing generated successfully"}
+    briefing = await generate_ai_briefing(trip_data)
 
-    except Exception as e:
-        return {"error": str(e)}
+    customer.execute('''UPDATE trips SET briefing_json = ? WHERE id = ?''', (briefing,
+    id))
+    conn.commit()
+    return {"briefing": briefing}
 
 
-@app.post('/chat')
-async def create_chat(user_message: str):
-    """Handles chat interactions using Ollama."""
-    try:
-        response = await chat_with_ollama(user_message)
-        return {"response": response}
-    except Exception as e:
-        return {"error": str(e)}
+@app.post('/{id}/chat')
+def chat_endpoint(id: int):
+    """Initiates a chat with Ollama based on trip details."""
+    customer.execute('''SELECT destination, arrival_date, departure_date, traveler_type, preferences FROM trips WHERE id = ?''', (id,))
+    row = customer.fetchone()
+    if not row:
+        raise fastapi.HTTPException(status_code=404, detail="Trip not found")
+
+    trip_data = {
+        'destination': row[0],
+        'arrival_date': row[1],
+        'departure_date': row[2],
+        'traveler_type': row[3],
+        'preferences': row[4]
+    }
+
+    user_message = f"Generate a travel suggestion for destination {trip_data['destination']} from {trip_data['arrival_date']} to {trip_data['departure_date']} for a {trip_data['traveler_type']} traveler with preferences {trip_data['preferences']}."
+    ai_response = chat_with_ollama(user_message)
+    return {"message": ai_response}
 
 
 @app.post('/intelligence/{destination}')
-async def get_intelligence(destination: str):
-    """Gathers destination intelligence from external APIs and DuckDuckGo."""
-    try:
-        intelligence = await gather_destination_info(destination)
-        return intelligence
-    except Exception as e:
-        return {"error": str(e)}
+def intelligence_endpoint(destination: str):
+    """Gathers destination intelligence."""
+    intelligence = gather_destination_info(destination)
+    return intelligence
 
 
 if __name__ == "__main__":

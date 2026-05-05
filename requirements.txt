@@ -2,5 +2,5 @@ fastapi
 pydantic
 ollama
 uvicorn[standard]
-httpX
+httpx
 duckduckgo_search
